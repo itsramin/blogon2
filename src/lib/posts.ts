@@ -18,7 +18,7 @@ export interface PostData {
   content: string;
 }
 
-export function getAllPosts(): PostData[] {
+export async function getAllPosts(): Promise<PostData[]> {
   if (process.env.NODE_ENV === "production") {
     if (!fs.existsSync(postsDirectory)) {
       fs.mkdirSync(postsDirectory, { recursive: true });
@@ -57,24 +57,22 @@ export function getAllPosts(): PostData[] {
   return posts.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-export function getPostBySlug(slug: string): PostData | null {
-  const fullPath = path.join(postsDirectory, `${slug}.xml`);
-
-  if (!fs.existsSync(fullPath)) {
-    return null;
-  }
-
-  const fileContents = fs.readFileSync(fullPath, "utf8");
-
+export async function getPostBySlug(slug: string): Promise<PostData | null> {
   try {
+    const fullPath = path.join(postsDirectory, `${slug}.xml`);
+
+    if (!fs.existsSync(fullPath)) {
+      return null;
+    }
+
+    const fileContents = fs.readFileSync(fullPath, "utf8");
     const parsed = parser.parse(fileContents);
-    const post = parsed.post;
 
     return {
       slug,
-      title: post.title,
-      date: post.date,
-      content: post.content,
+      title: parsed.post.title,
+      date: parsed.post.date,
+      content: parsed.post.content,
     };
   } catch (error) {
     console.error(`Error parsing ${slug}.xml:`, error);
