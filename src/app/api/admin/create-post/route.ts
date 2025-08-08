@@ -1,6 +1,5 @@
-import { writeFile } from "fs/promises";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
+import { createFileInRepo } from "@/lib/github";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,8 +11,6 @@ export async function POST(request: NextRequest) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    const filePath = path.join(process.cwd(), "posts", `${slug}.xml`);
-
     // Create XML content
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <post>
@@ -22,17 +19,26 @@ export async function POST(request: NextRequest) {
   <content>${escapeXml(content)}</content>
 </post>`;
 
-    await writeFile(filePath, xmlContent);
+    // Save to GitHub
+    await createFileInRepo(
+      `posts/${slug}.xml`,
+      xmlContent,
+      `Add new post: ${title}`
+    );
 
     return NextResponse.json({ success: true, slug });
   } catch (error) {
     console.error("Error creating post:", error);
     return NextResponse.json(
-      { error: "Failed to create post" },
+      {
+        error: error instanceof Error ? error.message : "Failed to create post",
+      },
       { status: 500 }
     );
   }
 }
+
+// Keep your escapeXml function
 
 // Helper function to escape XML special characters
 function escapeXml(unsafe: string): string {

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { XMLParser } from "fast-xml-parser";
+import { getFileFromRepo } from "./github";
 
 const rootDirectory = process.cwd();
 const postsDirectory = path.join(
@@ -57,25 +58,23 @@ export async function getAllPosts(): Promise<PostData[]> {
   return posts.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-export async function getPostBySlug(slug: string): Promise<PostData | null> {
+export async function getPostBySlug(slug: string) {
   try {
-    const fullPath = path.join(postsDirectory, `${slug}.xml`);
+    const xmlContent = await getFileFromRepo(`posts/${slug}.xml`);
+    if (!xmlContent) return null;
 
-    if (!fs.existsSync(fullPath)) {
-      return null;
-    }
-
-    const fileContents = fs.readFileSync(fullPath, "utf8");
-    const parsed = parser.parse(fileContents);
+    // Simple XML parsing (for more complex needs, consider a proper parser)
+    const titleMatch = xmlContent.match(/<title>(.*?)<\/title>/);
+    const dateMatch = xmlContent.match(/<date>(.*?)<\/date>/);
+    const contentMatch = xmlContent.match(/<content>(.*?)<\/content>/);
 
     return {
-      slug,
-      title: parsed.post.title,
-      date: parsed.post.date,
-      content: parsed.post.content,
+      title: titleMatch ? titleMatch[1] : "",
+      date: dateMatch ? dateMatch[1] : "",
+      content: contentMatch ? contentMatch[1] : "",
     };
   } catch (error) {
-    console.error(`Error parsing ${slug}.xml:`, error);
+    console.error("Error fetching post:", error);
     return null;
   }
 }
